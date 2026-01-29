@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bazzite Postmortem</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #1a1b26;
+      --surface: #24283b;
+      --border: #3b4261;
+      --text: #c0caf5;
+      --text-muted: #565f89;
+      --heading: #7aa2f7;
+      --link: #7dcfff;
+      --accent: #7aa2f7;
+      --code-bg: #1e2030;
+      --inline-code-bg: #2a2e42;
+      --green: #9ece6a;
+      --orange: #e0af68;
+      --red: #f7768e;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 52rem;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    #content h1, #content h2, #content h3,
+    #content h4, #content h5, #content h6 {
+      color: var(--heading);
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    #content h1 {
+      font-size: 2rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+      margin-top: 0;
+    }
+
+    #content h2 {
+      font-size: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+    }
+
+    #content h3 { font-size: 1.25rem; }
+
+    #content p {
+      margin-bottom: 1rem;
+    }
+
+    #content a {
+      color: var(--link);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--link);
+    }
+
+    #content a:hover {
+      border-bottom-style: solid;
+    }
+
+    #content strong { color: var(--orange); }
+    #content em { color: var(--accent); font-style: italic; }
+
+    #content code {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.875em;
+      background: var(--inline-code-bg);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+
+    #content pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1rem;
+    }
+
+    #content pre code {
+      background: none;
+      padding: 0;
+      font-size: 0.85em;
+      line-height: 1.6;
+    }
+
+    #content ul, #content ol {
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+    }
+
+    #content li {
+      margin-bottom: 0.35rem;
+    }
+
+    #content li::marker {
+      color: var(--accent);
+    }
+
+    #content blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem;
+      background: rgba(187, 154, 247, 0.05);
+      border-radius: 0 6px 6px 0;
+      color: var(--text-muted);
+    }
+
+    #content blockquote p { margin-bottom: 0; }
+
+    #content hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+
+    #content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+
+    #content th, #content td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+    }
+
+    #content th {
+      background: var(--code-bg);
+      color: var(--heading);
+      font-weight: 600;
+    }
+
+    #content img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin: 0.5rem 0;
+    }
+
+    #content .task-list-item {
+      list-style: none;
+      margin-left: -1.5rem;
+    }
+
+    #content input[type="checkbox"] {
+      margin-right: 0.5rem;
+      accent-color: var(--green);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="content"></div>
+  </div>
+
+  <script id="markdown" type="text/markdown">
+# Bazzite Post-Mortem
+
+Hi everyone, I hope you enjoyed your Christmas holidays, I certainly did! And it has been a while since I did. So, you might be wondering what is going on or confused about what has been happening with Bazzite over the holidays. Let's have an honest discussion about it, what it means for you as a Bazzite user, and what the future holds.
+
+## A Brief History
+But first, we will begin with a brief history of Bazzite and how it came to be. Bazzite started in 2023 as a side project of Kyle Gospodnetich, exploring whether it was possible to create something similar to SteamOS but based on OSTree and Fedora. Turns out it was, and around the end of 2023, we can estimate that Bazzite had around at most 500 active weekly users (the metric we use today).
+
+Then, around November 2023, the Legion Go released. At that time, I was looking for a personal computer to dock and thought to myself, hm this is great value. The top chip of AMD for 800$, built in controllers, and a great screen. So I bought one and put Linux on it, realizing that, well, nothing worked. I thought to myself perhaps I could do something about this, so I created the project Handheld Daemon, which aimed to provide a vendor software replacement for the Legion Go for Linux. We made great progress, and around December 2023, the Legion Go worked properly. Kyle saw that, and included Handheld Daemon on Bazzite. On January 2024, support for the ROG Ally was added, then in March 2024, preliminary support for GPD, Ayaneo, AYN, OneXPlayer came. This support was fleshed out more throughout 2024, with ROG Ally X in September 2024, OneXPlayer Devices in October 2024, and GPD over the last few months of 2024.
+
+In parallel, however, this caused some animosity between me and some other OSS developers. Specifically, Derek J. Clark who was part of the space since 2022, I want to say, felt that this one year seniority and priviledges given to him due to this (ChimeraOS maintainer, admin of a private Discord server with other OSS handheld developers) meant that he was entitled to be the one to create, well, what Handheld Daemon was doing. So, even though Handheld Daemon was feature complete by March 2024, Derek started inputplumber around that time and used his means to silence me plus things. This included smearing me to other industry professionals, banning me from that private discord server, and convincing other hobby distributions to use his software through ideological means (e.g., we use more kernel drivers).
+
+I thought to myself, well, this is unfortunate, but at the same time my expert opinion was that the architecture of Inputplumber was fundamentally flawed so it would never work properly. I told him this personally and he interpreted it as insulting him. I never made any public statements about Derek or Inputplumber, as I wanted to keep things professional. Distributions are bound to make the best choice for their users, so if they do not do that that is their loss. So, I focused my efforts on Bazzite, integrating Handheld Daemon closely with Bazzite, its kernel and a gamescope fork tightly (which I maintained). Bazzite began to rapidly grow and receive publicity, so much in fact that we ended this year with around 60,000 active weekly users, a 120x increase from when I joined.
+
+During the process, I also cleaned up a lot of the maintainance overhead of Bazzite, removing Asus and Surface images, cleaning the kernel to prepare it for real secure boot, and adding version locks to Nvidia drivers. As part of this, the build matrix of Bazzite went from a 70% success rate to a more than 95% success rate. I also paved a path for Bazzite to have sustainable funding, doing the research and creating an OpenCollective space where a lot of you donate.
+
+Now, fast forward to December 2025. Look, all families have their issues, and the Bazzite team is no different. For the purposes of this, let's say it is me, Kyle, Noel Miller, and a few others that do not need the attention.
+
+Over the years, me and, well, normal Bazzite users started to have issues with Kyle. You see, while Kyle is a great maintainer, he seems to treat Bazzite as his personal computer OS and the discord server as his personal hangout. But when you are relying on your computer to play games, do work, and be productive, you want stability and reliability.
+
+So, he tends to push changes before they are fully ready so he can play with them. Examples are day one Fedora releases regardless of whether it works properly (although we got good at that), yanking X11 in early 2024 as Chris Titus (first big youtuber) was reviewing Bazzite, breaking a lot of his software and causing him to ragequit the review, introducing Bazaar too early while it had memory issues and crashed on low end hardware, switching to iwd the day Phoronix announced there are rumors Intel stopped maintainance and breaking enterprise WiFi and WiFi on a lot of Intel devices, using Ptyxis as the default terminal (decent software, but Konsole is _fine_), bundling the Steam client plus problematic codecs so Bazzite cannot ship on hardware, and putting an assortment of unnecessary packages that we then have to maintain (8 Gnome extensions, etc). There are more, but you get the idea.
+
+Meanwhile, he seems to treat Discord as his personal hangout, forming parasocial relationships with some users, and banning people for disagreeing with him, pointing out issues, or just bans-as-favor. Now, you might think this is "right wingers" or similar. Not really, those are in the single digits. Most bans are due to arguments with people that try to use a single wine prefix, say containers cannot replace their workflow, complain about "unorthodox" defaults, or mention something vaguely related to piracy. The handling of this also does not abide to modern CoC standards, causing animosity and pent up anger in users, where some lash out in frustration in DMs, which are then used as evidence to ban them permanently. It was a common occurance for me to wake up in the morning and see Reddit mod messages by disgruntled users. During my tenure as moderator on Reddit/Discord, I banned around 3 spammy accounts on Reddit total.
+
+After a while, I started to get frustrated with this behavior. I told Kyle to stop, and only some of the messages were public. This caused certain problematic members of our community to misinterpret what I was saying and try to target me and cancel me online (to which Derek also joined in by making public statements), as they saw that that the status quo would stop and they seem to be relying on our community for psychological support. Here, I need to add that we are not trained therapists or particularly socially adept (we sit on a computer all day). Relying on us or on a shared developer space for emotional support is not healthy. If you feel like you need emotional support, please reach out to people in real life. In addition, we need to ensure a full due process before banning people, as mistakes can happen. Yes, for small communities going by trust is fine, but Bazzite is not a small community anymore.
+
+Kyle used this cancelling as a fulcrum and I assume thought "Bazzite is at a good place, I do not need people questioning my (breaking) changes, I will kick Antheas, then adopt the upstream integrations to e.g. align with Valve. This way, I release some political pressure (part of which was Framework, a relationship he handles) and gain full control of Bazzite". He is now trying to create "Open Gaming Collective (OGC)" to offload responsibility about hardware maintainance to others, inviting anyone that would join to do so.
+
+So, without following an enstablished process, he abused his credentials access to Bazzite infrastructure and a first mover click advantage to remove me. He then blocked me, personally too, cancelled our upcoming talk in FOSDEM, and wiped all mentions of me from Bazzite's website. Noel was also complicit with it, sending me a nice "Thanks for your efforts" message and telling me they would reduce my credentials first. To that I said, no, I am an equal or I am out. After two years I am entitled to that. Noel did some basic community management for Bazzite, it was out of place for him to take this kind of decisions. I have not spoken to either since. Doing things by the book in this case would have been better for everyone.
+
+These kind of decisions cannot be reverted unfortunately. A bridge was burnt here. I really tried to make Bazzite the new standard for gaming on Linux. To make it sustainable long-term, to have a great community, and to provide the best experience possible. And I had to make a lot of compromises to do that.
+
+But after these actions, Bazzite's fate is sealed as a non-commercial hobbyist-like OS.
+
+Kyle's decisions also did not restore harmony, Aurora and Bluefin left the common discord server.
+
+Personally, I took a nice month off and enjoyed my holidays.
+
+As for why this postmortem is only coming now, well, I wanted to give Kyle (and well, me) some time to reflect perhaps reconsider his actions. But alas, it seems that is not the case. Usually these things are best handled in private, so this is somewhat of a last resort.
+
+## What Now?
+So, what does this mean for you as a Bazzite user? Well, things are about to get bumpy. Perhaps you will want to disable updates, particularly if you are on handheld hardware. MSI Claw users already lost some WiFi functionality due to the iwd change 2 weeks ago.
+
+And from my part, unfortunately, there will be a service gap before there is a replacement. But, rest assured: hardened linux distributions can stay secure without updates for a long time. Just make sure you do not install random software from untrusted sources.
+
+Perhaps you should also stop donating, as a chunk of those funds will no longer go to me. I did not take a penny. To that regard, I think some or most of it should be sent to charity.
+
+## The Future
+As for the future, well, I cannot say what will happen to Bazzite. This is a typical founder breakup scenario. The Bazzite marks are now even more contaminated (add disgruntled early founder to the list) and it is no longer in a path of sustainability. Here, it depends on what sustainability means. If sustainability means "fun hobby OS", then sure, it will be sustainable forever. And good on Kyle if he keeps on. If it means something serious that perhaps vendors can ship or you can rely on, that cannot happen anymore.
+
+From my part, I will continue to maintain Handheld Daemon and upstream kernel patches (I was involved in 12 for kernel 7.0). And perhaps I start from a clean slate moving forward, focusing on what is important: stability, reliability, legal compliance, and other stuff you need from an OS on your personal computer.
+
+I made a discord server for Handheld Daemon where you can ask for support/discuss and we can carve out a path together:
+
+https://discord.hhd.dev
+
+Lastly, I apologize again for the bumpy ride. I really wanted Bazzite to be the next big thing for Linux gaming, but alas, sometimes things do not go as planned. If you experience breakages you are entitled to complain. You installed Bazzite for reasons that might no longer apply. You spent days installing it, setting it up, and configuring it. I really value that, and I am sorry.
+
+Signed,
+
+Antheas Kapenekakis
+
+#### GPD Announcement Clarification
+GPD is a great company that has been very supportive of our progress on Bazzite. In November, I was in talks with GPD about adding proper GPD Win 5 support to Bazzite. In January, I talked again with GPD, explaining to them some of what I said here with uncertainty about Bazzite's future. And we agreed that if the integration could be finished, this would be best for well, users that bought the device on that promise. The only integration that is left as far as Bazzite is concerned is Handheld Daemon, and I am still the person responsible for that. So I will slowly do it, over the next few weeks.
+
+It is very unfortunate Kyle is targetting a company for proudly announcing support for Bazzite and that they will also accept issues on _their_ discord server. This was unheard of just a year ago.
+
+Here, I apologize on behalf of Kyle. Credential abuse/mishandling does not legally give Kyle the ability to trademark Bazzite or take this kind of decision. In fact, it would be hard trademark Bazzite now, as it is contaminated through my involvement, a lot of which is public and unretractable, and poor handling thereafter. This legal murkiness (pre-existing to an extent) is part of the reason I will be focusing my efforts elsewhere. The Bazzite mark can only be _used non-commercially from now on and not e.g. sold_ moving forward otherwise we will need to have a follow-up discussion.
+  </script>
+
+  <script>
+    const md = document.getElementById('markdown').textContent;
+    // Dedent: find minimum leading whitespace and strip it
+    const lines = md.split('\n');
+    const indented = lines.filter(l => l.trim().length > 0);
+    const minIndent = indented.reduce((min, l) => {
+      const match = l.match(/^(\s*)/);
+      return Math.min(min, match[1].length);
+    }, Infinity);
+    const dedented = lines.map(l => l.slice(minIndent)).join('\n').trim();
+
+    marked.setOptions({ gfm: true, breaks: false });
+    document.getElementById('content').innerHTML = marked.parse(dedented);
+  </script>
+</body>
+</html>
